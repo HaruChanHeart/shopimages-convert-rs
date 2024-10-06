@@ -1,0 +1,8 @@
+# Rust Cargo
+/target
+
+# Custom
+./input
+./output
+*.exe
+*.zip
