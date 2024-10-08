@@ -42,7 +42,7 @@ fn convert_dds_file(input_buffer: &[u8]) -> Vec<u8> {
     let mut new_data = hex_buffer.clone();
     new_data.extend_from_slice(&input_buffer[12..]);
 
-    new_data
+    return new_data;
 }
 
 fn convert_png_file(input_path: Vec<u8>, output_path: &str) -> Result<(), Box<dyn std::error::Error>> {
@@ -74,10 +74,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Formatting file name
     let filename: String = Local::now().format("%Y-%m-%d").to_string();
-    let mut entries = fs::read_dir(input_dir)?;
+    let entries: Vec<_> = fs::read_dir(input_dir)?.collect();
 
     // Check if input directory is empty
-    if entries.next().is_none() {
+    if entries.is_empty() {
         println!("{} No files found. Copy directly from %localappdata%/Blizzard Entertainment/Overwatch/ShopImages", "[WARNING]".bright_yellow());
 
         // Wait for user input before exiting
@@ -86,17 +86,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
     else {
-        for (index, entry) in entries.enumerate() {
-            let file_path = entry?.path();
-            let input_path = file_path.to_str().unwrap();
-    
-            let data = decompress_gz_file(input_path)?;
-            let dds = convert_dds_file(&data);
-    
-            let output_filename = format!("{}/{}_{}.png", output_dir, filename, index);
+        for (index, entry) in entries.iter().enumerate() {
+            match entry {
+                Ok(entry) => {
+                    let file_path = entry.path();
+                    let input_path = file_path.to_str().unwrap();
+                    let output_filename = format!("{}/{}_{}.png", output_dir, filename, index);
             
-            if let Err(_err) = convert_png_file(dds, &output_filename) {
-                println!("{} Failed to convert PNG: {}", "[ERROR]".bright_red(), _err);
+                    let data = decompress_gz_file(input_path)?;
+                    let dds = convert_dds_file(&data);
+                    
+                    if let Err(_err) = convert_png_file(dds, &output_filename) {
+                        println!("{} Failed to convert PNG: {}", "[ERROR]".bright_red(), _err);
+                    }
+                }
+                Err(err) => {
+                    println!("{} Error reading entry: {}", "[ERROR]".bright_red(), err);
+                }
             }
         }
     
