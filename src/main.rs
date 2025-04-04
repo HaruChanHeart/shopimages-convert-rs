@@ -78,7 +78,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Check if input directory is empty
     if entries.is_empty() {
-        println!("{} No files found. Copy directly from %localappdata%/Blizzard Entertainment/Overwatch/ShopImages", "[WARNING]".bright_yellow());
+        println!("{} Files not found. Copy files from %localappdata%/Blizzard Entertainment/Overwatch/ShopImages", "[WARNING]".bright_yellow());
 
         // Wait for user input before exiting
         wait_for_keypress();
