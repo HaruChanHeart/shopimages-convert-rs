@@ -1,5 +1,5 @@
 use std::fs;
-use std::io::{self, Cursor, Read, stdin};
+use std::io::{self, Cursor, Read, Seek, SeekFrom, BufReader, stdin};
 use flate2::read::GzDecoder;
 use chrono::Local;
 use colored::*;
@@ -19,8 +19,33 @@ fn set_console_title(title: &str) {
 }
 
 fn decompress_gz_file(input_path: &str) -> io::Result<Vec<u8>> {
-    let file = fs::File::open(input_path)?;
-    let mut reader = GzDecoder::new(file);
+    // Check 4 bytes
+    let mut file = fs::File::open(input_path)?;
+    let mut header = [0u8; 4];
+    file.read_exact(&mut header)?;
+
+    // Check Magic Number
+    let is_gzip = header[0] == 0x1F && header[1] == 0x8B && header[2] == 0x08;
+
+    // Method 1
+    if is_gzip {
+        if let Ok(data) = try_decompress(fs::File::open(input_path)?, 0) {
+            return Ok(data);
+        }
+    }
+
+    // Method 2
+    if let Ok(data) = try_decompress(fs::File::open(input_path)?, 0x10) {
+        return Ok(data);
+    }
+
+    // If neither method works, return an error
+    Err(io::Error::new(io::ErrorKind::InvalidData, "Invalid GZ file format"))
+}
+
+fn try_decompress(mut file: fs::File, offset: u64) -> io::Result<Vec<u8>> {
+    file.seek(SeekFrom::Start(offset))?;
+    let mut reader = GzDecoder::new(BufReader::new(file));
     let mut buffer = Vec::new();
     reader.read_to_end(&mut buffer)?;
     Ok(buffer)
